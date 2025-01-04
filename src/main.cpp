@@ -119,7 +119,7 @@ void loop() {
     ++frames;
     if(millis()>ts+1000) {
         ts=millis();
-        sprintf(fps_text,"FPS: %d, Avg: %0.2fms\n",frames,total_ms/((float)frames==0?.001f:frames));
+        sprintf(fps_text,"FPS: %d, Avg: %0.2fms",frames,total_ms/((float)frames==0?.001f:frames));
         puts(fps_text);
         fps_label.text(fps_text);
         frames = 0;
