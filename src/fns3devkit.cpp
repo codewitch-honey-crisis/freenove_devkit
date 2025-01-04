@@ -264,6 +264,7 @@ void lcd_initialize(size_t lcd_transfer_buffer_size) {
     buscfg.miso_io_num = -1;
     buscfg.quadwp_io_num = -1;
     buscfg.quadhd_io_num = -1;
+    
     // declare enough space for the transfer buffers + 8 bytes SPI DMA overhead
     buscfg.max_transfer_sz = lcd_transfer_buffer_size + 8;
 
