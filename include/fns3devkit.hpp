@@ -61,6 +61,6 @@ extern void lcd_rotation(uint8_t rotation);
 
 extern void camera_initialize(int flags=CAM_ALLOC_CAM_PSRAM|CAM_ALLOC_FB_PSRAM);
 extern void camera_deinitialize();
-extern void camera_on_frame(const void* bitmap)  __attribute__((weak));; // optionall implemented by user
+extern void camera_on_frame(const void* bitmap)  __attribute__((weak));; // optionally implemented by user
 extern const void* camera_lock_frame_buffer(bool lock=true);
 extern void camera_unlock_frame_buffer();
