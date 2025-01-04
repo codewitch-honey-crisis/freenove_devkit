@@ -375,12 +375,13 @@ void camera_task(void* pvParameters) {
         esp_camera_fb_return(fb);
         if (fb_buf != NULL && camera_fb!=nullptr) {
             if(pdTRUE==xSemaphoreTake(camera_fb_lock,50)) {
-                for (int i = 0; i < fb_buf->len; i += 2) {
+                /*for (int i = 0; i < fb_buf->len; i += 2) {
                     uint8_t temp = 0;
                     temp = fb_buf->buf[i];
                     camera_fb[i] = fb_buf->buf[i + 1];
                     camera_fb[i + 1] = temp;
-                }
+                }*/
+                memcpy(camera_fb,fb_buf->buf,fb->len);
                 camera_on_frame(camera_fb);
                 xSemaphoreGive(camera_fb_lock);
                 
@@ -436,6 +437,7 @@ void camera_initialize(int flags) {
     sensor_t * s = esp_camera_sensor_get();
     // initial sensors are flipped vertically and colors are a bit saturated
     s->set_vflip(s, 0);      // flip it back
+    //s->set_contrast(s,0);
     s->set_hmirror(s, 1);    // horizontal mirror image
     s->set_brightness(s, 0); // up the brightness just a bit
     s->set_saturation(s, 0); // lower the saturation
