@@ -26,7 +26,7 @@ static esp_lcd_panel_io_handle_t lcd_io_handle = nullptr;
 static bool lcd_flush_ready(esp_lcd_panel_io_handle_t panel_io,
                             esp_lcd_panel_io_event_data_t* edata,
                             void* user_ctx) {
-    lcd_flush_complete();
+    lcd_on_flush_complete();
     return true;
 }
 #endif
@@ -85,7 +85,7 @@ void lcd_initialize(size_t lcd_transfer_buffer_size) {
         esp_lcd_new_panel_st7789(lcd_io_handle, &panel_config, &lcd_handle));
     // Reset the display
     ESP_ERROR_CHECK(esp_lcd_panel_reset(lcd_handle));
-
+    delay(120);
     // Initialize LCD panel
     ESP_ERROR_CHECK(esp_lcd_panel_init(lcd_handle));
     //  Swap x and y axis (Different LCD screens may need different options)
