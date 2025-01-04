@@ -9,6 +9,7 @@
 #include <esp_lcd_panel_io.h>
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_panel_vendor.h>
+//#include "esp_lcd_gc9a01.h"
 #endif
 #include <esp_camera.h>
 #ifdef ARDUINO
@@ -72,7 +73,7 @@ void lcd_initialize(size_t lcd_transfer_buffer_size) {
 
     esp_lcd_panel_dev_config_t panel_config;
     memset(&panel_config, 0, sizeof(panel_config));
-    panel_config.reset_gpio_num = -1;
+    panel_config.reset_gpio_num = pin::lcd_rst;
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
     panel_config.rgb_endian = LCD_RGB_ENDIAN_BGR;
 #else
@@ -85,7 +86,6 @@ void lcd_initialize(size_t lcd_transfer_buffer_size) {
         esp_lcd_new_panel_st7789(lcd_io_handle, &panel_config, &lcd_handle));
     // Reset the display
     ESP_ERROR_CHECK(esp_lcd_panel_reset(lcd_handle));
-    delay(120);
     // Initialize LCD panel
     ESP_ERROR_CHECK(esp_lcd_panel_init(lcd_handle));
     //  Swap x and y axis (Different LCD screens may need different options)
@@ -226,7 +226,7 @@ void camera_initialize(int flags) {
     s->set_hmirror(s, 1);    // horizontal mirror image
     s->set_brightness(s, 0); // up the brightness just a bit
     s->set_saturation(s, 0); // lower the saturation
-    xTaskCreate(camera_task, "camera_task", 8192, NULL, 1, &camera_task_handle);
+    xTaskCreate(camera_task, "camera_task", 10*1024, NULL, 1, &camera_task_handle);
 
 }
 void camera_deinitialize() {
