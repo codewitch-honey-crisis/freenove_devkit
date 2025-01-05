@@ -2,7 +2,7 @@
 
 #include <ft6336.hpp>
 #ifdef NO_LCD_PANEL_API
-// this code taken from https://github.com/Bodmer/TFT_eSPI
+// this code adapted from https://github.com/Bodmer/TFT_eSPI
 #include <Arduino.h>
 #include <SPI.h>
 #include <driver/spi_master.h>
@@ -14,7 +14,7 @@
 #include <esp_lcd_panel_io.h>
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_panel_vendor.h>
-// #include "esp_lcd_gc9a01.h"
+
 #endif
 #include <esp_camera.h>
 #ifdef ARDUINO
