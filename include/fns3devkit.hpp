@@ -74,6 +74,3 @@ extern void camera_deinitialize();
 extern void camera_on_frame(const void* bitmap)  __attribute__((weak));; // optionally implemented by user
 extern const void* camera_lock_frame_buffer(bool lock=true);
 extern void camera_unlock_frame_buffer();
-
-extern void audio_initialize();
-extern void audio_deinitialize();

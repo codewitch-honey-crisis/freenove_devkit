@@ -392,7 +392,7 @@ void camera_copy_rotate(void* bitmap, int rows, int cols) {
     // allocating space for the new rotated image
     const uint16_t* original = (const uint16_t*) bitmap;
     uint16_t* out = (uint16_t*)camera_fb;
-    switch(camera_rot&3) {
+    switch(camera_rot) {
         case 1: {
             // rotate 90
             for(int y = 0; y<rows;++y) {
@@ -424,25 +424,16 @@ void camera_copy_rotate(void* bitmap, int rows, int cols) {
             memcpy(camera_fb,original,rows*cols*2);
             break;
     }
-    
 }
 // camera thread
 void camera_task(void* pvParameters) {
-    camera_fb_t* fb = NULL;  // data structure of camera frame buffer
     camera_fb_t* fb_buf = NULL;
     while (true) {
-        fb = esp_camera_fb_get();
-        fb_buf = fb;
-        esp_camera_fb_return(fb);
+        fb_buf = esp_camera_fb_get();
+        esp_camera_fb_return(fb_buf);
         if (fb_buf != NULL && camera_fb != nullptr) {
             if (pdTRUE == xSemaphoreTake(camera_fb_lock, 50)) {
-                /*for (int i = 0; i < fb_buf->len; i += 2) {
-                    uint8_t temp = 0;
-                    temp = fb_buf->buf[i];
-                    camera_fb[i] = fb_buf->buf[i + 1];
-                    camera_fb[i + 1] = temp;
-                }*/
-                camera_copy_rotate(fb_buf->buf, fb->width,fb->height);
+                camera_copy_rotate(fb_buf->buf, fb_buf->width,fb_buf->height);
                 camera_on_frame(camera_fb);
                 xSemaphoreGive(camera_fb_lock);
             }
