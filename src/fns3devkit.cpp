@@ -64,7 +64,6 @@ static touch_t lcd_touch;
                        (uint16_t)((C) << 8 | (C) >> 8),    \
                    32)
 
-// static TFT_eSPI lcd_panel(240, 320);
 SPIClass lcd_spi(HSPI);
 static void lcd_begin_write() {
     lcd_spi.beginTransaction(SPISettings(80000000, MSBFIRST, SPI_MODE0));
