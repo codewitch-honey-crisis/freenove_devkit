@@ -97,7 +97,7 @@ win_font fps_font(fps_font_stream);
 static screen_t main_screen;
 static camera_view cam_view;
 static label_t fps_label;
-static const constexpr bool big_cam = true;
+static const constexpr bool big_cam = false;
 void setup() {
     Serial.begin(115200);
     lcd_initialize(lcd_transfer_size);

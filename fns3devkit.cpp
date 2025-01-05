@@ -25,132 +25,57 @@ using namespace esp_idf;
 using touch_t = ft6336<240, 320>;
 static touch_t lcd_touch;
 #ifdef NO_LCD_PANEL_API
-#define SPI_PORT 3
-#ifndef REG_SPI_BASE  //                      HSPI                 FSPI/VSPI
-#define REG_SPI_BASE(i) (((i) > 1) ? (DR_REG_SPI3_BASE) : (DR_REG_SPI2_BASE))
-#endif
-
-// Fix ESP32S3 IDF bug for name change
-#ifndef SPI_MOSI_DLEN_REG
-#define SPI_MOSI_DLEN_REG(x) SPI_MS_DLEN_REG(x)
-#endif
-#define TFT_CASET 0x2A
-#define TFT_PASET 0x2B
-#define TFT_RAMWR 0x2C
-#define _spi_cmd (volatile uint32_t*)(SPI_CMD_REG(SPI_PORT))
-#define _spi_user (volatile uint32_t*)(SPI_USER_REG(SPI_PORT))
-#define _spi_mosi_dlen (volatile uint32_t*)(SPI_MOSI_DLEN_REG(SPI_PORT))
-#define _spi_w (volatile uint32_t*)(SPI_W0_REG(SPI_PORT))
-#define SET_BUS_WRITE_MODE *_spi_user = SPI_USR_MOSI
-#define SET_BUS_READ_MODE *_spi_user = SPI_USR_MOSI | SPI_USR_MISO | SPI_DOUTDIN
-#define SPI_BUSY_CHECK while (*_spi_cmd & SPI_USR)
-#define CS_L                                        \
-    GPIO.out1_w1tc.val = (1 << (pin::lcd_cs - 32)); \
-    GPIO.out1_w1tc.val = (1 << (pin::lcd_cs - 32))
-#define CS_H GPIO.out1_w1ts.val = (1 << (pin::lcd_cs - 32))
 #define DC_C GPIO.out_w1tc = (1 << pin::lcd_dc);
 #define DC_D GPIO.out_w1ts = (1 << pin::lcd_dc);
-#define SPI_UPDATE (BIT(23))
-#define TFT_WRITE_BITS(D, B)        \
-    *_spi_mosi_dlen = B - 1;        \
-    *_spi_w = D;                    \
-    *_spi_cmd = SPI_UPDATE;         \
-    while (*_spi_cmd & SPI_UPDATE); \
-    *_spi_cmd = SPI_USR;            \
-    while (*_spi_cmd & SPI_USR);
-#define tft_Write_8(C) TFT_WRITE_BITS(C, 8)
-#define tft_Write_32C(C, D)                                \
-    TFT_WRITE_BITS((uint16_t)((D) << 8 | (D) >> 8) << 16 | \
-                       (uint16_t)((C) << 8 | (C) >> 8),    \
-                   32)
-
-SPIClass lcd_spi(HSPI);
-static void lcd_begin_write() {
-    lcd_spi.beginTransaction(SPISettings(80000000, MSBFIRST, SPI_MODE0));
-    CS_L;
-    SET_BUS_WRITE_MODE;
-}
-static void lcd_end_write() {
-    SPI_BUSY_CHECK;
-    CS_H;
-    SET_BUS_READ_MODE;
-    lcd_spi.endTransaction();
-}
+static spi_device_handle_t lcd_spi_handle;
 static void lcd_command(uint8_t cmd, const uint8_t* args = NULL, size_t len =0) {
-    DC_C;
-    tft_Write_8(cmd);
-    DC_D;
-    while(len--) {
-        tft_Write_8(*(args++));
+    spi_transaction_t tx;
+    memset(&tx,0,sizeof(tx));
+    tx.length = 8;
+    tx.tx_buffer = &cmd;
+    tx.user = 0;
+    spi_device_polling_transmit(lcd_spi_handle,&tx);
+    if(len&&args) {
+        tx.user = (void*)1;
+        tx.length = 8*len;
+        tx.tx_buffer = args;
+        tx.user = (void*)1;
+        spi_device_polling_transmit(lcd_spi_handle,&tx);
     }
 }
 
 static void lcd_set_window(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
-    SPI_BUSY_CHECK;
-    DC_C;
-    tft_Write_8(TFT_CASET);
-    DC_D;
-    tft_Write_32C(x1, x2);
-    DC_C;
-    tft_Write_8(TFT_PASET);
-    DC_D;
-    tft_Write_32C(y1, y2);
-    DC_C;
-    tft_Write_8(TFT_RAMWR);
-    DC_D;
+    uint8_t args[4];
+    args[0]=(x1&0xFF)<<8;
+    args[1]=(x1>>8);
+    args[2]=(x2&0xFF)<<8;
+    args[3]=(x2>>8);
+    
+    lcd_command(0x2A,args,4);
+    args[0]=(y1&0xFF)<<8;
+    args[1]=(y1>>8);
+    args[2]=(y2&0xFF)<<8;
+    args[3]=(y2>>8);
+    lcd_command(0x2B,args,4);
+    lcd_command(0x2c);
 }
 static void lcd_write_bitmap(const void* data_in, uint32_t len) {
-    uint32_t* data = (uint32_t*)data_in;
-
-    if (len > 31) {
-        WRITE_PERI_REG(SPI_MOSI_DLEN_REG(SPI_PORT), 511);
-        while (len > 31) {
-            while (READ_PERI_REG(SPI_CMD_REG(SPI_PORT)) & SPI_USR);
-            WRITE_PERI_REG(SPI_W0_REG(SPI_PORT), *data++);
-            WRITE_PERI_REG(SPI_W1_REG(SPI_PORT), *data++);
-            WRITE_PERI_REG(SPI_W2_REG(SPI_PORT), *data++);
-            WRITE_PERI_REG(SPI_W3_REG(SPI_PORT), *data++);
-            WRITE_PERI_REG(SPI_W4_REG(SPI_PORT), *data++);
-            WRITE_PERI_REG(SPI_W5_REG(SPI_PORT), *data++);
-            WRITE_PERI_REG(SPI_W6_REG(SPI_PORT), *data++);
-            WRITE_PERI_REG(SPI_W7_REG(SPI_PORT), *data++);
-            WRITE_PERI_REG(SPI_W8_REG(SPI_PORT), *data++);
-            WRITE_PERI_REG(SPI_W9_REG(SPI_PORT), *data++);
-            WRITE_PERI_REG(SPI_W10_REG(SPI_PORT), *data++);
-            WRITE_PERI_REG(SPI_W11_REG(SPI_PORT), *data++);
-            WRITE_PERI_REG(SPI_W12_REG(SPI_PORT), *data++);
-            WRITE_PERI_REG(SPI_W13_REG(SPI_PORT), *data++);
-            WRITE_PERI_REG(SPI_W14_REG(SPI_PORT), *data++);
-            WRITE_PERI_REG(SPI_W15_REG(SPI_PORT), *data++);
-            SET_PERI_REG_MASK(SPI_CMD_REG(SPI_PORT), SPI_UPDATE);
-            while (READ_PERI_REG(SPI_CMD_REG(SPI_PORT)) & SPI_UPDATE);
-            SET_PERI_REG_MASK(SPI_CMD_REG(SPI_PORT), SPI_USR);
-            len -= 32;
-        }
-    }
-
     if (len) {
-        while (READ_PERI_REG(SPI_CMD_REG(SPI_PORT)) & SPI_USR);
-        WRITE_PERI_REG(SPI_MOSI_DLEN_REG(SPI_PORT), (len << 4) - 1);
-        for (uint32_t i = 0; i <= (len << 1); i += 4)
-            WRITE_PERI_REG((SPI_W0_REG(SPI_PORT) + i), *data++);
-        SET_PERI_REG_MASK(SPI_CMD_REG(SPI_PORT), SPI_UPDATE);
-        while (READ_PERI_REG(SPI_CMD_REG(SPI_PORT)) & SPI_UPDATE);
-        SET_PERI_REG_MASK(SPI_CMD_REG(SPI_PORT), SPI_USR);
+        spi_transaction_t tx;
+        memset(&tx,0,sizeof(tx));
+        tx.length = 8*len;
+        tx.tx_buffer = data_in;
+        tx.user = (void*)2;
+        ESP_ERROR_CHECK(spi_device_queue_trans(lcd_spi_handle,&tx,portMAX_DELAY));
     }
-    while (READ_PERI_REG(SPI_CMD_REG(SPI_PORT)) & SPI_USR);
+    
+
+    
 }
 static void lcd_st7789_init() {
-    pinMode(pin::lcd_cs, OUTPUT);
-    digitalWrite(pin::lcd_cs, HIGH);  // Chip select high (inactive)
-    pinMode(pin::lcd_dc, OUTPUT);
-    digitalWrite(pin::lcd_dc, HIGH);  // D/C high (data mode)
-    lcd_spi.begin(pin::spi_clk, -1, pin::spi_mosi);
-    lcd_begin_write();
+    
     lcd_command(0x01);  // reset
-    lcd_end_write();
     delay(150);  // Wait for reset to complete
-    lcd_begin_write();
     lcd_command(0x11);  // Sleep out
     delay(120);
     lcd_command(0x13);  // Normal display mode on
@@ -198,13 +123,10 @@ static void lcd_st7789_init() {
         0x00,0x00,0x01,0x3F
     };
     lcd_command(0x2B,params17,4);  // Row address set
-    lcd_end_write();
     delay(120);
-    lcd_begin_write();
     lcd_command(0x29);
     delay(120);
     lcd_command(0x20);
-    lcd_end_write();
 }
 #else
 static esp_lcd_panel_handle_t lcd_handle = nullptr;
@@ -216,8 +138,39 @@ static bool lcd_flush_ready(esp_lcd_panel_io_handle_t panel_io,
     return true;
 }
 #endif
+IRAM_ATTR void lcd_spi_pre_cb(spi_transaction_t *trans) {
+    if(!trans->user) {
+        DC_C;
+    }
+}
+IRAM_ATTR void lcd_spi_post_cb(spi_transaction_t *trans) {
+    if(!trans->user) {
+        DC_D;
+    } else if((int)trans->user == 2) {
+        lcd_on_flush_complete();
+    }
+}
 void lcd_initialize(size_t lcd_transfer_buffer_size) {
 #ifdef NO_LCD_PANEL_API
+    pinMode(pin::lcd_dc, OUTPUT);
+    DC_D;
+    spi_bus_config_t bus_cfg;
+    memset(&bus_cfg,0,sizeof(bus_cfg));
+    bus_cfg.max_transfer_sz = lcd_transfer_buffer_size + 8;
+    bus_cfg.miso_io_num = -1;
+    bus_cfg.mosi_io_num = pin::spi_mosi;
+    bus_cfg.sclk_io_num = pin::spi_clk;
+    ESP_ERROR_CHECK(spi_bus_initialize(SPI3_HOST,&bus_cfg,SPI_DMA_CH_AUTO));
+    spi_device_interface_config_t dev_cfg;
+    memset(&dev_cfg,0,sizeof(dev_cfg));
+    dev_cfg.dummy_bits = 0;
+    dev_cfg.queue_size = 10;
+    dev_cfg.flags = SPI_DEVICE_NO_DUMMY;
+    dev_cfg.spics_io_num = pin::lcd_cs;
+    dev_cfg.pre_cb=lcd_spi_pre_cb;
+    dev_cfg.post_cb=lcd_spi_post_cb;
+    dev_cfg.clock_speed_hz = 80*1000*1000;
+    ESP_ERROR_CHECK(spi_bus_add_device(SPI3_HOST,&dev_cfg,&lcd_spi_handle));
     lcd_st7789_init();
 #else
     gpio_config_t gpio_conf;
@@ -292,11 +245,11 @@ void lcd_flush_bitmap(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2,
                       const void* bitmap) {
 #ifdef NO_LCD_PANEL_API
     int w = x2 - x1 + 1, h = y2 - y1 + 1;
-    lcd_begin_write();
     lcd_set_window(x1, y1, x2, y2);
     lcd_write_bitmap(bitmap, w * h);
-    lcd_end_write();
-    lcd_on_flush_complete();
+    //lcd_on_flush_complete();
+    
+    //lcd_on_flush_complete();
 #else
     esp_lcd_panel_draw_bitmap(lcd_handle, x1, y1, x2 + 1, y2 + 1,
                               (void*)bitmap);
@@ -310,7 +263,6 @@ bool lcd_touch_pressed(uint16_t* out_x, uint16_t* out_y) {
 
 void lcd_rotation(uint8_t rotation) {
 #ifdef NO_LCD_PANEL_API
-    lcd_begin_write();
     uint8_t param;
     switch (rotation & 3) {
         case 1:
@@ -328,7 +280,6 @@ void lcd_rotation(uint8_t rotation) {
     };
     lcd_command(0x36,&param,1);
     
-    lcd_end_write();
 #else
     switch (rotation & 3) {
         case 0:
