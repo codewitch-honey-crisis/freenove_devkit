@@ -408,7 +408,7 @@ void camera_initialize(int flags) {
     config.pin_sccb_scl = pin::cam_sioc;
     config.pin_pwdn = pin::cam_pwdn;
     config.pin_reset = pin::cam_rst;
-    config.xclk_freq_hz = 20 * 1000000;
+    config.xclk_freq_hz = 20 * 1000* 1000;
     config.frame_size = 0 != (flags & CAM_FRAME_SIZE_96X96) ? FRAMESIZE_96X96
                                                             : FRAMESIZE_240X240;
     config.pixel_format = PIXFORMAT_RGB565;
