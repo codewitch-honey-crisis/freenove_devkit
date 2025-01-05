@@ -97,15 +97,15 @@ win_font fps_font(fps_font_stream);
 static screen_t main_screen;
 static camera_view cam_view;
 static label_t fps_label;
-static const constexpr bool big_cam = false;
+static const constexpr bool big_cam = true;
 void setup() {
     Serial.begin(115200);
     lcd_initialize(lcd_transfer_size);
     lcd_initialize_buffers();
     camera_initialize(big_cam?0:CAM_FRAME_SIZE_96X96);
     camera_levels(CAM_LOWEST,CAM_MEDIUM,CAM_MEDIUM,CAM_HIGH);
-    lcd_rotation(3);
-    camera_rotation(3);
+    lcd_rotation(0);
+    camera_rotation(0);
     lcd_display.buffer_size(lcd_transfer_size);
     lcd_display.buffer1(lcd_transfer_buffer);
     lcd_display.on_flush_callback(uix_on_flush);
