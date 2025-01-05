@@ -52,6 +52,14 @@ enum {
     CAM_ALLOC_CAM_PSRAM=(1<<1),
     CAM_FRAME_SIZE_96X96=(1<<2)
 };
+enum cam_level {
+    CAM_NO_CHANGE = -3,
+    CAM_LOWEST,
+    CAM_LOW,
+    CAM_MEDIUM,
+    CAM_HIGH,
+    CAM_HIGHEST
+};
 extern void lcd_initialize(size_t max_transfer_size = 32768);
 extern void lcd_on_flush_complete(); // implemented by user
 extern void lcd_flush_bitmap(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, const void* bitmap);
@@ -60,7 +68,11 @@ extern bool lcd_touch_pressed(uint16_t* out_x,uint16_t* out_y);
 extern void lcd_rotation(uint8_t rotation);
 
 extern void camera_initialize(int flags=CAM_ALLOC_CAM_PSRAM|CAM_ALLOC_FB_PSRAM);
+extern void camera_levels(cam_level brightness, cam_level contrast=CAM_NO_CHANGE, cam_level saturation=CAM_NO_CHANGE, cam_level sharpness=CAM_NO_CHANGE);
+extern void camera_rotation(uint8_t rotation);
 extern void camera_deinitialize();
 extern void camera_on_frame(const void* bitmap)  __attribute__((weak));; // optionally implemented by user
 extern const void* camera_lock_frame_buffer(bool lock=true);
 extern void camera_unlock_frame_buffer();
+
+extern void audio_initialize();

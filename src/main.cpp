@@ -72,22 +72,24 @@ void lcd_on_flush_complete() {
     lcd_display.flush_complete();
 }
 const_buffer_stream fps_font_stream(vga_8x8,sizeof(vga_8x8));
-win_font fps_font(fps_font_stream,0);
+win_font fps_font(fps_font_stream);
 static screen_t main_screen;
 static camera_view cam_view;
 static label_t fps_label;
-static const constexpr bool big_cam = true;
+static const constexpr bool big_cam = false;
 void setup() {
     Serial.begin(115200);
     lcd_initialize(lcd_transfer_size);
-    lcd_rotation(0);
+    lcd_rotation(3);
+    camera_rotation(3);
     lcd_initialize_buffers();
     camera_initialize(big_cam?0:CAM_FRAME_SIZE_96X96);
+    camera_levels(CAM_LOWEST,CAM_MEDIUM,CAM_MEDIUM,CAM_HIGH);
     lcd_display.buffer_size(lcd_transfer_size);
     lcd_display.buffer1(lcd_transfer_buffer);
     lcd_display.on_flush_callback(uix_on_flush);
     main_screen.dimensions({240,320});
-    main_screen.background_color(color_t::light_blue);
+    main_screen.background_color(color_t::black);
     const int wmo = big_cam?239:95;
     srect16 sr(0,0,wmo,wmo);
     sr.center_inplace(main_screen.bounds());
@@ -101,7 +103,7 @@ void setup() {
     fps_label.bounds(sr);
     fps_label.font(fps_font);
     fps_label.padding({0,0});
-    fps_label.color(color<rgba_pixel<32>>::black);
+    fps_label.color(color<rgba_pixel<32>>::red);
     fps_label.text("");
     fps_label.text_justify(uix_justify::top_left);
     main_screen.register_control(fps_label);
