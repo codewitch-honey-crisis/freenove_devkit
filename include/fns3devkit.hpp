@@ -76,3 +76,4 @@ extern const void* camera_lock_frame_buffer(bool lock=true);
 extern void camera_unlock_frame_buffer();
 
 extern void audio_initialize();
+extern void audio_deinitialize();

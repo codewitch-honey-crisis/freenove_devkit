@@ -1,3 +1,4 @@
+#define CAM_VIEW_LOCK_RENDER
 #include <Arduino.h>
 #include "fns3devkit.hpp"
 #include <gfx.hpp>
@@ -14,6 +15,9 @@ using label_t = label<typename screen_t::control_surface_type>;
 using color_t = color<typename screen_t::pixel_type>;
 class camera_view : public control<screen_t::control_surface_type> {
     using base_type = control<screen_t::control_surface_type>;
+#ifdef CAM_VIEW_LOCK_RENDER
+    const void* m_bmp;
+#endif
 public:
     camera_view() : base_type() {
      
@@ -25,18 +29,35 @@ public:
         this->invalidate();
     }
 protected:
+#ifdef CAM_VIEW_LOCK_RENDER
     void on_before_paint() override {
-        
+        m_bmp = camera_lock_frame_buffer();
     }
+#endif
     void on_paint(control_surface_type& destination, const srect16& clip) {
-        const void* bitmap_data = camera_lock_frame_buffer();
+        // get the camera frame buffer
+        const void* bitmap_data =
+#ifdef CAM_VIEW_LOCK_RENDER
+           m_bmp;
+#else        
+           camera_lock_frame_buffer();
+#endif
+        // wrap it with a const bitmap (lightweight)
         const_bitmap<rgb_pixel<16>> cbmp(destination.dimensions(),bitmap_data);
+        // draw the bitmap to the control surface, clipping so we only
+        // draw what we need to
         draw::bitmap(destination,clip,cbmp,((rect16)clip).crop(cbmp.bounds()));
+#ifndef CAM_VIEW_LOCK_RENDER
+        // free up the frame buffer
+        camera_unlock_frame_buffer();
+#endif
+    }
+#ifdef CAM_VIEW_LOCK_RENDER
+    void on_after_paint() override {
+        // free up the frame buffer
         camera_unlock_frame_buffer();
     }
-    void on_after_paint() override {
-        
-    }
+#endif
 };
 static void uix_on_flush(const rect16& bounds,
                              const void *bitmap, void* state) {
@@ -80,11 +101,11 @@ static const constexpr bool big_cam = false;
 void setup() {
     Serial.begin(115200);
     lcd_initialize(lcd_transfer_size);
-    lcd_rotation(3);
-    camera_rotation(3);
     lcd_initialize_buffers();
     camera_initialize(big_cam?0:CAM_FRAME_SIZE_96X96);
     camera_levels(CAM_LOWEST,CAM_MEDIUM,CAM_MEDIUM,CAM_HIGH);
+    lcd_rotation(3);
+    camera_rotation(3);
     lcd_display.buffer_size(lcd_transfer_size);
     lcd_display.buffer1(lcd_transfer_buffer);
     lcd_display.on_flush_callback(uix_on_flush);
@@ -129,6 +150,5 @@ void loop() {
         frames = 0;
         total_ms = 0;
         
-    }
-    
+    } 
 }
