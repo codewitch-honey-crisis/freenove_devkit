@@ -67,10 +67,7 @@ static void lcd_write_bitmap(const void* data_in, uint32_t len) {
         tx.tx_buffer = data_in;
         tx.user = (void*)2;
         ESP_ERROR_CHECK(spi_device_queue_trans(lcd_spi_handle,&tx,portMAX_DELAY));
-    }
-    
-
-    
+    }    
 }
 static void lcd_st7789_init() {
     
