@@ -1,18 +1,20 @@
 #define CAM_VIEW_LOCK_RENDER
 #include <Arduino.h>
+#include <SPIFFS.h>
 #include "fns3devkit.hpp"
 #include <gfx.hpp>
 #include <uix.hpp>
 #define VGA_8X8_IMPLEMENTATION
 #include "assets/vga_8x8.h"
+
 using namespace gfx;
 using namespace uix;
-
 static uix::display lcd_display;
 
 using screen_t = uix::screen<rgb_pixel<16>>;
 using label_t = label<typename screen_t::control_surface_type>;
 using color_t = color<typename screen_t::pixel_type>;
+
 class camera_view : public control<screen_t::control_surface_type> {
     using base_type = control<screen_t::control_surface_type>;
 #ifdef CAM_VIEW_LOCK_RENDER
@@ -59,6 +61,7 @@ protected:
     }
 #endif
 };
+
 static void uix_on_flush(const rect16& bounds,
                              const void *bitmap, void* state) {
     lcd_flush_bitmap(bounds.x1, bounds.y1, bounds.x2, bounds.y2, bitmap);
@@ -98,8 +101,10 @@ static screen_t main_screen;
 static camera_view cam_view;
 static label_t fps_label;
 static const constexpr bool big_cam = false;
+
 void setup() {
     Serial.begin(115200);
+    SPIFFS.begin();
     lcd_initialize(lcd_transfer_size);
     lcd_initialize_buffers();
     camera_initialize(big_cam?0:CAM_FRAME_SIZE_96X96);
@@ -130,6 +135,7 @@ void setup() {
     fps_label.text_justify(uix_justify::top_left);
     main_screen.register_control(fps_label);
     lcd_display.active_screen(main_screen);
+    Serial.printf("Free SRAM: %0.2fKB\n",(float)ESP.getFreeHeap()/1024.f);
 }
 
 void loop() {
@@ -152,4 +158,5 @@ void loop() {
         total_ms = 0;
         
     } 
+    
 }

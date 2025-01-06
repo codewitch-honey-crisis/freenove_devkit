@@ -557,6 +557,29 @@ size_t audio_write_int16(const int16_t* samples, size_t sample_count) {
         for(int i = 0;i<to_write;++i) {
             *(out++)=uint16_t(*(p++)+32768);
         }
+        size_t written=to_write*2;
+        i2s_write((i2s_port_t)0,audio_out_buffer,to_write*2,&written,portMAX_DELAY);
+        size_t samples_written = written>>1;
+        sample_count-=samples_written;
+        result+=samples_written;
+        if(samples_written!=to_write) {
+            return samples_written;
+        }
+    }
+    return result;
+}
+
+size_t audio_write_float(const float* samples, size_t sample_count, float vel) {
+    size_t result = 0;
+    const float* p = (const float*)samples;
+    uint16_t* out = audio_out_buffer;
+    while(sample_count) {
+        size_t to_write = sample_count<audio_max_samples?sample_count:audio_max_samples;
+        for(int i = 0;i<to_write;++i) {
+            float fval = *(p++)*vel;
+            int16_t val = fval>0?fval*32767:fval*32768;
+            *(out++)=uint16_t(val+32768);
+        }
         size_t written;
         i2s_write((i2s_port_t)0,audio_out_buffer,to_write*2,&written,portMAX_DELAY);
         size_t samples_written = written>>1;

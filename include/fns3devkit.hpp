@@ -75,7 +75,8 @@ extern void camera_on_frame(const void* bitmap)  __attribute__((weak));; // opti
 extern const void* camera_lock_frame_buffer(bool lock=true);
 extern void camera_unlock_frame_buffer();
 
-constexpr const size_t audio_max_samples = 512;
+constexpr const size_t audio_max_samples = 1024;
 extern void audio_initialize();
 extern void audio_deinitialize();
 extern size_t audio_write_int16(const int16_t* samples, size_t sample_count);
+extern size_t audio_write_float(const float* samples, size_t sample_count, float vel = 1.0f);
