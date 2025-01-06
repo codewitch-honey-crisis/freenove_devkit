@@ -104,6 +104,7 @@ void setup() {
     lcd_initialize_buffers();
     camera_initialize(big_cam?0:CAM_FRAME_SIZE_96X96);
     camera_levels(CAM_LOWEST,CAM_MEDIUM,CAM_MEDIUM,CAM_HIGH);
+    audio_initialize();
     lcd_rotation(0);
     camera_rotation(0);
     lcd_display.buffer_size(lcd_transfer_size);

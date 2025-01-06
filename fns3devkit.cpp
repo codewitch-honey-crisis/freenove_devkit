@@ -244,9 +244,6 @@ void lcd_flush_bitmap(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2,
     int w = x2 - x1 + 1, h = y2 - y1 + 1;
     lcd_set_window(x1, y1, x2, y2);
     lcd_write_bitmap(bitmap, w * h);
-    //lcd_on_flush_complete();
-    
-    //lcd_on_flush_complete();
 #else
     esp_lcd_panel_draw_bitmap(lcd_handle, x1, y1, x2 + 1, y2 + 1,
                               (void*)bitmap);

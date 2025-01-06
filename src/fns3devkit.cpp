@@ -14,9 +14,9 @@
 #include <esp_lcd_panel_io.h>
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_panel_vendor.h>
-
 #endif
 #include <esp_camera.h>
+#include <driver/i2s.h>
 #ifdef ARDUINO
 using namespace arduino;
 #else
@@ -399,7 +399,6 @@ void camera_task(void* pvParameters) {
     camera_fb_t* fb_buf = NULL;
     while (true) {
         fb_buf = esp_camera_fb_get();
-        esp_camera_fb_return(fb_buf);
         if (fb_buf != NULL && camera_fb != nullptr) {
             if (pdTRUE == xSemaphoreTake(camera_fb_lock, 50)) {
                 camera_copy_rotate(fb_buf->buf, fb_buf->width,fb_buf->height);
@@ -407,6 +406,8 @@ void camera_task(void* pvParameters) {
                 xSemaphoreGive(camera_fb_lock);
             }
         }
+        esp_camera_fb_return(fb_buf);
+        
     }
 }
 const void* camera_lock_frame_buffer(bool wait) {
@@ -515,4 +516,55 @@ void camera_deinitialize() {
 }
 void camera_on_frame(const void* bitmap) {
     // do nothing
+}
+static uint16_t audio_out_buffer[audio_max_samples];
+
+void audio_initialize() {
+    i2s_config_t i2s_config;
+    i2s_pin_config_t pins;
+    memset(&i2s_config,0,sizeof(i2s_config_t));
+    i2s_config.mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX );
+    i2s_config.sample_rate = 44100;
+    i2s_config.bits_per_sample = (i2s_bits_per_sample_t)16;
+    i2s_config.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT;
+    i2s_config.communication_format = I2S_COMM_FORMAT_STAND_MSB;
+    i2s_config.dma_buf_count = 14;
+    i2s_config.dma_buf_len = audio_max_samples;
+    i2s_config.use_apll = true;
+    i2s_config.intr_alloc_flags = ESP_INTR_FLAG_LEVEL2;
+    ESP_ERROR_CHECK(i2s_driver_install((i2s_port_t)0, &i2s_config, 0, NULL));
+    pins = {
+        .mck_io_num = I2S_PIN_NO_CHANGE, // Unused
+        .bck_io_num = pin::i2s_bclk,
+        .ws_io_num = pin::i2s_lrc,
+        .data_out_num = pin::i2s_dout,
+        .data_in_num = I2S_PIN_NO_CHANGE
+    };
+    ESP_ERROR_CHECK(i2s_set_pin((i2s_port_t)0,&pins));
+        
+    i2s_set_clk((i2s_port_t)0, 44100, 16, I2S_CHANNEL_STEREO);
+    i2s_zero_dma_buffer((i2s_port_t)0);
+}
+void audio_deinitialize() {
+    i2s_driver_uninstall((i2s_port_t)0);
+}
+size_t audio_write_int16(const int16_t* samples, size_t sample_count) {
+    size_t result = 0;
+    const int16_t* p = (const int16_t*)samples;
+    uint16_t* out = audio_out_buffer;
+    while(sample_count) {
+        size_t to_write = sample_count<audio_max_samples?sample_count:audio_max_samples;
+        for(int i = 0;i<to_write;++i) {
+            *(out++)=uint16_t(*(p++)+32768);
+        }
+        size_t written;
+        i2s_write((i2s_port_t)0,audio_out_buffer,to_write*2,&written,portMAX_DELAY);
+        size_t samples_written = written>>1;
+        sample_count-=samples_written;
+        result+=samples_written;
+        if(samples_written!=to_write) {
+            return samples_written;
+        }
+    }
+    return result;
 }

@@ -27,7 +27,7 @@ struct pin {
     constexpr static const int16_t cam_pclk=13;
     constexpr static const int16_t cam_pwdn=-1;
     constexpr static const int16_t cam_rst=-1;
-    constexpr static const int16_t i2s_blck=42;
+    constexpr static const int16_t i2s_bclk=42;
     constexpr static const int16_t i2s_dout=41;
     constexpr static const int16_t i2s_lrc=14;
     constexpr static const int16_t batt_in=19;
@@ -74,3 +74,8 @@ extern void camera_deinitialize();
 extern void camera_on_frame(const void* bitmap)  __attribute__((weak));; // optionally implemented by user
 extern const void* camera_lock_frame_buffer(bool lock=true);
 extern void camera_unlock_frame_buffer();
+
+constexpr const size_t audio_max_samples = 512;
+extern void audio_initialize();
+extern void audio_deinitialize();
+extern size_t audio_write_int16(const int16_t* samples, size_t sample_count);
