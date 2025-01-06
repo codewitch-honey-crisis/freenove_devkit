@@ -1,6 +1,7 @@
 #include "fns3devkit.hpp"
 
 #include <ft6336.hpp>
+#include <driver/i2s.h>
 #ifdef NO_LCD_PANEL_API
 // this code adapted from https://github.com/Bodmer/TFT_eSPI
 #include <Arduino.h>
@@ -150,6 +151,8 @@ IRAM_ATTR void lcd_spi_post_cb(spi_transaction_t *trans) {
 void lcd_initialize(size_t lcd_transfer_buffer_size) {
 #ifdef NO_LCD_PANEL_API
     pinMode(pin::lcd_dc, OUTPUT);
+    pinMode(pin::lcd_cs, OUTPUT);
+    digitalWrite(pin::lcd_cs,LOW);
     DC_D;
     spi_bus_config_t bus_cfg;
     memset(&bus_cfg,0,sizeof(bus_cfg));
@@ -163,10 +166,12 @@ void lcd_initialize(size_t lcd_transfer_buffer_size) {
     dev_cfg.dummy_bits = 0;
     dev_cfg.queue_size = 10;
     dev_cfg.flags = SPI_DEVICE_NO_DUMMY;
-    dev_cfg.spics_io_num = pin::lcd_cs;
+    dev_cfg.spics_io_num -1;//= pin::lcd_cs;
     dev_cfg.pre_cb=lcd_spi_pre_cb;
     dev_cfg.post_cb=lcd_spi_post_cb;
     dev_cfg.clock_speed_hz = 80*1000*1000;
+    //dev_cfg.cs_ena_posttrans=2;
+    //dev_cfg.cs_ena_pretrans=2;
     ESP_ERROR_CHECK(spi_bus_add_device(SPI3_HOST,&dev_cfg,&lcd_spi_handle));
     lcd_st7789_init();
 #else
@@ -460,4 +465,78 @@ void camera_deinitialize() {
 }
 void camera_on_frame(const void* bitmap) {
     // do nothing
+}
+static uint16_t audio_out_buffer[audio_max_samples];
+
+void audio_initialize() {
+    i2s_config_t i2s_config;
+    i2s_pin_config_t pins;
+    memset(&i2s_config,0,sizeof(i2s_config_t));
+    i2s_config.mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX );
+    i2s_config.sample_rate = 44100;
+    i2s_config.bits_per_sample = (i2s_bits_per_sample_t)16;
+    i2s_config.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT;
+    i2s_config.communication_format = I2S_COMM_FORMAT_STAND_MSB;
+    i2s_config.dma_buf_count = 14;
+    i2s_config.dma_buf_len = audio_max_samples;
+    i2s_config.use_apll = true;
+    i2s_config.intr_alloc_flags = ESP_INTR_FLAG_LEVEL2;
+    ESP_ERROR_CHECK(i2s_driver_install((i2s_port_t)0, &i2s_config, 0, NULL));
+    pins = {
+        .mck_io_num = I2S_PIN_NO_CHANGE, // Unused
+        .bck_io_num = pin::i2s_bclk,
+        .ws_io_num = pin::i2s_lrc,
+        .data_out_num = pin::i2s_dout,
+        .data_in_num = I2S_PIN_NO_CHANGE
+    };
+    ESP_ERROR_CHECK(i2s_set_pin((i2s_port_t)0,&pins));
+        
+    i2s_set_clk((i2s_port_t)0, 44100, 16, I2S_CHANNEL_STEREO);
+    i2s_zero_dma_buffer((i2s_port_t)0);
+}
+void audio_deinitialize() {
+    i2s_driver_uninstall((i2s_port_t)0);
+}
+size_t audio_write_int16(const int16_t* samples, size_t sample_count) {
+    size_t result = 0;
+    const int16_t* p = (const int16_t*)samples;
+    uint16_t* out = audio_out_buffer;
+    while(sample_count) {
+        size_t to_write = sample_count<audio_max_samples?sample_count:audio_max_samples;
+        for(int i = 0;i<to_write;++i) {
+            *(out++)=uint16_t(*(p++)+32768);
+        }
+        size_t written=to_write*2;
+        i2s_write((i2s_port_t)0,audio_out_buffer,to_write*2,&written,portMAX_DELAY);
+        size_t samples_written = written>>1;
+        sample_count-=samples_written;
+        result+=samples_written;
+        if(samples_written!=to_write) {
+            return samples_written;
+        }
+    }
+    return result;
+}
+
+size_t audio_write_float(const float* samples, size_t sample_count, float vel) {
+    size_t result = 0;
+    const float* p = (const float*)samples;
+    uint16_t* out = audio_out_buffer;
+    while(sample_count) {
+        size_t to_write = sample_count<audio_max_samples?sample_count:audio_max_samples;
+        for(int i = 0;i<to_write;++i) {
+            float fval = *(p++)*vel;
+            int16_t val = fval>0?fval*32767:fval*32768;
+            *(out++)=uint16_t(val+32768);
+        }
+        size_t written;
+        i2s_write((i2s_port_t)0,audio_out_buffer,to_write*2,&written,portMAX_DELAY);
+        size_t samples_written = written>>1;
+        sample_count-=samples_written;
+        result+=samples_written;
+        if(samples_written!=to_write) {
+            return samples_written;
+        }
+    }
+    return result;
 }

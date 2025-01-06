@@ -66,7 +66,7 @@ static touch_t lcd_touch;
 
 SPIClass lcd_spi(HSPI);
 static void lcd_begin_write() {
-    lcd_spi.beginTransaction(SPISettings(80000000, MSBFIRST, SPI_MODE0));
+    lcd_spi.beginTransaction(SPISettings(80*1000*1000, MSBFIRST, SPI_MODE0));
     CS_L;
     SET_BUS_WRITE_MODE;
 }
@@ -227,6 +227,8 @@ void lcd_initialize(size_t lcd_transfer_buffer_size) {
     gpio_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
     gpio_conf.pull_up_en = GPIO_PULLUP_DISABLE;
     gpio_config(&gpio_conf);
+    gpio_set_direction((gpio_num_t)pin::lcd_cs,GPIO_MODE_OUTPUT);
+    gpio_set_level((gpio_num_t)pin::lcd_cs,0);
     // configure the SPI bus
     const spi_host_device_t host = SPI3_HOST;
     spi_bus_config_t buscfg;
@@ -236,7 +238,6 @@ void lcd_initialize(size_t lcd_transfer_buffer_size) {
     buscfg.miso_io_num = -1;
     buscfg.quadwp_io_num = -1;
     buscfg.quadhd_io_num = -1;
-
     // declare enough space for the transfer buffers + 8 bytes SPI DMA overhead
     buscfg.max_transfer_sz = lcd_transfer_buffer_size + 8;
 
@@ -246,7 +247,7 @@ void lcd_initialize(size_t lcd_transfer_buffer_size) {
     esp_lcd_panel_io_spi_config_t io_config;
     memset(&io_config, 0, sizeof(io_config));
     io_config.dc_gpio_num = pin::lcd_dc;
-    io_config.cs_gpio_num = pin::lcd_cs;
+    io_config.cs_gpio_num = -1;// pin::lcd_cs;
     io_config.pclk_hz = 80 * 1000 * 1000;
     io_config.lcd_cmd_bits = 8;
     io_config.lcd_param_bits = 8;
