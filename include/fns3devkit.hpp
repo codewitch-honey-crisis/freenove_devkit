@@ -60,6 +60,12 @@ enum cam_level {
     CAM_HIGH,
     CAM_HIGHEST
 };
+enum audio_format {
+    AUDIO_22K_MONO=0,
+    AUDIO_22K_STEREO,
+    AUDIO_44_1K_MONO,
+    AUDIO_44_1K_STEREO,
+};
 extern void lcd_initialize(size_t max_transfer_size = 32768);
 extern void lcd_on_flush_complete(); // implemented by user
 extern void lcd_flush_bitmap(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, const void* bitmap);
@@ -76,7 +82,7 @@ extern const void* camera_lock_frame_buffer(bool lock=true);
 extern void camera_unlock_frame_buffer();
 
 constexpr const size_t audio_max_samples = 1024;
-extern void audio_initialize();
+extern void audio_initialize(audio_format format = AUDIO_44_1K_STEREO);
 extern void audio_deinitialize();
 extern size_t audio_write_int16(const int16_t* samples, size_t sample_count);
 extern size_t audio_write_float(const float* samples, size_t sample_count, float vel = 1.0f);

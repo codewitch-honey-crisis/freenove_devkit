@@ -1,9 +1,9 @@
 #include "fns3devkit.hpp"
-
 #include <ft6336.hpp>
 #ifdef NO_LCD_PANEL_API
 // this code adapted from https://github.com/Bodmer/TFT_eSPI
 #include <Arduino.h>
+#include <Wire.h>
 #include <SPI.h>
 #include <driver/spi_master.h>
 #include <hal/gpio_ll.h>
@@ -24,6 +24,7 @@ using namespace esp_idf;
 #endif
 using touch_t = ft6336<240, 320>;
 static touch_t lcd_touch;
+constexpr static const int lcd_speed = 80*1000*1000;
 #ifdef NO_LCD_PANEL_API
 #define SPI_PORT 3
 #ifndef REG_SPI_BASE  //                      HSPI                 FSPI/VSPI
@@ -66,7 +67,7 @@ static touch_t lcd_touch;
 
 SPIClass lcd_spi(HSPI);
 static void lcd_begin_write() {
-    lcd_spi.beginTransaction(SPISettings(80*1000*1000, MSBFIRST, SPI_MODE0));
+    lcd_spi.beginTransaction(SPISettings(lcd_speed, MSBFIRST, SPI_MODE0));
     CS_L;
     SET_BUS_WRITE_MODE;
 }
@@ -217,6 +218,7 @@ static bool lcd_flush_ready(esp_lcd_panel_io_handle_t panel_io,
 }
 #endif
 void lcd_initialize(size_t lcd_transfer_buffer_size) {
+    Wire.begin(pin::i2c_sda,pin::i2c_scl, 100*1000);
 #ifdef NO_LCD_PANEL_API
     lcd_st7789_init();
 #else
@@ -248,7 +250,7 @@ void lcd_initialize(size_t lcd_transfer_buffer_size) {
     memset(&io_config, 0, sizeof(io_config));
     io_config.dc_gpio_num = pin::lcd_dc;
     io_config.cs_gpio_num = -1;// pin::lcd_cs;
-    io_config.pclk_hz = 80 * 1000 * 1000;
+    io_config.pclk_hz = lcd_speed;
     io_config.lcd_cmd_bits = 8;
     io_config.lcd_param_bits = 8;
     io_config.spi_mode = 0;
@@ -520,14 +522,14 @@ void camera_on_frame(const void* bitmap) {
 }
 static uint16_t audio_out_buffer[audio_max_samples];
 
-void audio_initialize() {
+void audio_initialize(audio_format format) {
     i2s_config_t i2s_config;
     i2s_pin_config_t pins;
     memset(&i2s_config,0,sizeof(i2s_config_t));
     i2s_config.mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX );
-    i2s_config.sample_rate = 44100;
+    i2s_config.sample_rate = (format==AUDIO_22K_MONO || format==AUDIO_22K_STEREO)?22050:44100;
     i2s_config.bits_per_sample = (i2s_bits_per_sample_t)16;
-    i2s_config.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT;
+    i2s_config.channel_format = I2S_CHANNEL_FMT_ONLY_LEFT;
     i2s_config.communication_format = I2S_COMM_FORMAT_STAND_MSB;
     i2s_config.dma_buf_count = 14;
     i2s_config.dma_buf_len = audio_max_samples;
@@ -543,7 +545,7 @@ void audio_initialize() {
     };
     ESP_ERROR_CHECK(i2s_set_pin((i2s_port_t)0,&pins));
         
-    i2s_set_clk((i2s_port_t)0, 44100, 16, I2S_CHANNEL_STEREO);
+    i2s_set_clk((i2s_port_t)0, 44100, 16,  (format==AUDIO_22K_STEREO||format==AUDIO_44_1K_STEREO)?I2S_CHANNEL_STEREO:I2S_CHANNEL_MONO);
     i2s_zero_dma_buffer((i2s_port_t)0);
 }
 void audio_deinitialize() {
