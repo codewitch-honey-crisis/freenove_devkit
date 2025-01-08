@@ -61,17 +61,32 @@ enum cam_level {
     CAM_HIGHEST
 };
 enum audio_format {
-    AUDIO_22K_MONO=0,
-    AUDIO_22K_STEREO,
-    AUDIO_44_1K_MONO,
+    AUDIO_44_1K_MONO=0,
     AUDIO_44_1K_STEREO,
+    AUDIO_22K_MONO,
+    AUDIO_22K_STEREO,
+    AUDIO_11K_MONO,
+    AUDIO_11K_STEREO,
 };
-extern void lcd_initialize(size_t max_transfer_size = 32768);
-extern void lcd_on_flush_complete(); // implemented by user
+extern void neopixel_initialize(uint8_t rmt_channel = 0, uint8_t rmt_interrupt=23);
+extern void neopixel_color(uint32_t rgbw);
+extern void neopixel_color_rgbw(uint8_t r, uint8_t g, uint8_t b, uint8_t w=0);
+extern void neopixel_deinitialize();
+
+extern void lcd_initialize(size_t max_transfer_size = 32768, bool initialize_touch = true);
+
+extern 
+#ifdef IRAM_ATTR
+IRAM_ATTR
+#endif
+void lcd_on_flush_complete(); // implemented by user
 extern void lcd_flush_bitmap(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, const void* bitmap);
-extern void lcd_touch_update();
-extern bool lcd_touch_pressed(uint16_t* out_x,uint16_t* out_y);
 extern void lcd_rotation(uint8_t rotation);
+
+extern void touch_initialize(uint8_t threshhold = 32);
+extern void touch_rotation(uint8_t rotation);
+extern bool touch_xy(uint16_t* out_x, uint16_t* out_y);
+extern bool touch_xy2(uint16_t* out_x, uint16_t* out_y);
 
 extern void camera_initialize(int flags=CAM_ALLOC_CAM_PSRAM|CAM_ALLOC_FB_PSRAM);
 extern void camera_levels(cam_level brightness, cam_level contrast=CAM_NO_CHANGE, cam_level saturation=CAM_NO_CHANGE, cam_level sharpness=CAM_NO_CHANGE);
@@ -86,3 +101,5 @@ extern void audio_initialize(audio_format format = AUDIO_44_1K_STEREO);
 extern void audio_deinitialize();
 extern size_t audio_write_int16(const int16_t* samples, size_t sample_count);
 extern size_t audio_write_float(const float* samples, size_t sample_count, float vel = 1.0f);
+
+extern void led_enable(bool value);
