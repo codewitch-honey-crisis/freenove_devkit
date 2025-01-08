@@ -4,7 +4,7 @@
 #else
 #include <stdint.h>
 #endif
-#include <esp_i2c.hpp>
+
 struct pin {
     constexpr static const int16_t sdmmc_d0=40;
     constexpr static const int16_t sdmmc_clk=39;
@@ -42,11 +42,7 @@ struct pin {
     constexpr static const int16_t lcd_rst=-1;
     constexpr static const int16_t lcd_bkl=-1;
 };
-#ifdef ARDUINO
-using i2c_t = arduino::esp_i2c<0,pin::i2c_sda,pin::i2c_scl>;
-#else
-using i2c_t = esp_idf::esp_i2c<0,pin::i2c_sda,pin::i2c_scl>;
-#endif
+
 enum {
     CAM_ALLOC_FB_PSRAM=(1<<0),
     CAM_ALLOC_CAM_PSRAM=(1<<1),
