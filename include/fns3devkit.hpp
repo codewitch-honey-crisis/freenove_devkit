@@ -70,8 +70,7 @@ extern void neopixel_color_rgbw(uint8_t r, uint8_t g, uint8_t b, uint8_t w=0);
 extern void neopixel_deinitialize();
 
 extern void lcd_initialize(size_t max_transfer_size = 32768, bool initialize_touch = true);
-
-extern 
+extern void lcd_deinitialize();
 #ifdef IRAM_ATTR
 IRAM_ATTR
 #endif
@@ -99,3 +98,4 @@ extern size_t audio_write_int16(const int16_t* samples, size_t sample_count);
 extern size_t audio_write_float(const float* samples, size_t sample_count, float vel = 1.0f);
 
 extern void led_enable(bool value);
+

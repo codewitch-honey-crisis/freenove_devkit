@@ -267,6 +267,7 @@ constexpr static const int lcd_speed = 80 * 1000 * 1000;
 #ifdef USE_SPI_MASTER
 static spi_device_handle_t lcd_spi_handle = nullptr;
 #else
+static bool lcd_initialized=false;
 #define SPI_PORT 3
 #ifndef REG_SPI_BASE  //                      HSPI                 FSPI/VSPI
 #define REG_SPI_BASE(i) (((i) > 1) ? (DR_REG_SPI3_BASE) : (DR_REG_SPI2_BASE))
@@ -567,15 +568,22 @@ void lcd_initialize(size_t lcd_transfer_buffer_size, bool init_touch) {
     gpio_config(&io_conf);
     gpio_set_level((gpio_num_t)pin::lcd_dc, 0);
 #else
+    if(lcd_initialized) {
+        return;
+    }
     pinMode(pin::lcd_cs, OUTPUT);
     digitalWrite(pin::lcd_cs, HIGH);  // Chip select high (inactive)
     pinMode(pin::lcd_dc, OUTPUT);
     digitalWrite(pin::lcd_dc, HIGH);  // D/C high (data mode)
 
     lcd_spi.begin(pin::spi_clk, -1, pin::spi_mosi);
+    lcd_initialized = true;
 #endif
     lcd_st7789_init();
 #else
+    if(lcd_handle!=nullptr) {
+        return;
+    }
     gpio_config_t gpio_conf;
     gpio_conf.intr_type = GPIO_INTR_DISABLE;
     gpio_conf.mode = GPIO_MODE_OUTPUT;
@@ -661,7 +669,23 @@ void lcd_flush_bitmap(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2,
                               (void*)bitmap);
 #endif
 }
-
+void lcd_deinitialize() {
+#ifdef NO_LCD_PANEL_API
+#ifdef USE_SPI_MASTER
+ESP_ERROR_CHECK(spi_bus_remove_device(lcd_spi_handle));
+ESP_ERROR_CHECK(spi_bus_free((spi_host_device_t)SPI3_HOST));
+#else
+lcd_spi.end();
+lcd_initialized = false;
+#endif
+#else
+ESP_ERROR_CHECK(esp_lcd_panel_del(lcd_handle));
+lcd_handle = nullptr;
+ESP_ERROR_CHECK(esp_lcd_panel_io_del(lcd_io_handle));
+lcd_io_handle = nullptr;
+ESP_ERROR_CHECK(spi_bus_free((spi_host_device_t)SPI3_HOST));
+#endif
+}
 void lcd_touch_update() { touch_update(); }
 
 void lcd_rotation(uint8_t rotation) {

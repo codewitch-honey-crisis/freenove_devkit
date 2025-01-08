@@ -112,12 +112,10 @@ static void uix_on_touch(point16* out_locations,size_t* in_out_locations_size,vo
 }
 constexpr static const size_t lcd_transfer_size = ((320*240)*2)/10;
 static uint8_t* lcd_transfer_buffer = nullptr;
-//static uint8_t* lcd_transfer_buffer2 = nullptr;
 
 static void lcd_initialize_buffers() {
     lcd_transfer_buffer=(uint8_t*)malloc(lcd_transfer_size);
-    //lcd_transfer_buffer2=(uint8_t*)malloc(lcd_transfer_size);
-    if(lcd_transfer_buffer==nullptr) {// || lcd_transfer_buffer2==nullptr) {
+    if(lcd_transfer_buffer==nullptr) {
         puts("Unable to initialize transfer buffers.");
         ESP_ERROR_CHECK(ERR_MEM);
     }
@@ -149,7 +147,6 @@ void setup() {
     
     lcd_display.buffer_size(lcd_transfer_size);
     lcd_display.buffer1(lcd_transfer_buffer);
-    //lcd_display.buffer2(lcd_transfer_buffer2);
     lcd_display.on_flush_callback(uix_on_flush);
     main_screen.dimensions({240,320});
     main_screen.background_color(color_t::black);
