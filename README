@@ -2,6 +2,8 @@
 
 An Arduino project for the Freenove S3 Devkit demonstrating all the features.
 
-To use it, copy the contents of SD to the included SD card and put it in the slot before uploading.
+To use it, install the htcw_uix Arduino library and then copy the contents of SD to the included SD card and put it in the slot before uploading.
+
+The audio will get louder the closer you are to the proximity sensor. it kind of cuts out when it doesn't detect anything, but not all the way.
 
 the freenove_s3_devkit.c/.h files can be used in your own projects and are compatible with arduino and the esp-idf

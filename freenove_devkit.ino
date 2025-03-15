@@ -4,22 +4,30 @@
 #include "esp_vfs_fat.h"
 #include "freenove_s3_devkit.h"
 #include "sdmmc_cmd.h"
+// from htcw_gfx lib
 #include "gfx.h"
+// from htcw_uix lib
 #include "uix.h"
+// for SoundFont support
 #define TSF_IMPLEMENTATION
 #include "tsf.h"
+// for MIDI support
 #define TML_IMPLEMENTATION
 #include "tml.h"
+// an 8x8 VGA font for the frame rate
 #define VGA_8X8_IMPLEMENTATION
 #include "assets/vga_8x8.h"
 
+// import gfx and uix namespaces
 using namespace gfx;
 using namespace uix;
 
+// 240x240 or 96x96
 static constexpr const int big_cam = 1;
 
 static SemaphoreHandle_t audio_sync = NULL;
 static float audio_amplitude = 0;
+
 static uint32_t prox_average;  // Average IR at power up
 
 struct tsf_allocator tsf_alloc;
@@ -58,7 +66,6 @@ protected:
             // draw the bitmap to the control surface, clipping so we only
             // draw what we need to
             draw::bitmap(destination,(rect16)clip,cam_bmp,((rect16)clip).crop(cam_bmp.bounds()));
-            //draw::bitmap(destination,destination.bounds(),m_bmp,m_bmp.bounds());
         }
     }
 };
